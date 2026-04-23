@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🍓 터미타임 과일비 | 우리 아기 목 튼튼</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0f;
+    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+  }
+
+  #app { position: relative; width: 100vw; height: 100vh; }
+
+  #videoCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    transform: scaleX(-1);
+  }
+
+  #gameCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+
+  #ui {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+
+  #topBar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 16px 20px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+  }
+
+  .stat-box {
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 14px;
+    padding: 8px 14px;
+    text-align: center;
+    min-width: 80px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  #heightBar {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    height: 40vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+
+  #heightFill {
+    width: 100%;
+    background: linear-gradient(to top, #ff6b6b, #ffd93d, #6bcb77);
+    border-radius: 4px;
+    transition: height 0.3s ease;
+    height: 0%;
+  }
+
+  #heightLabel {
+    position: absolute;
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    letter-spacing: 1px;
+  }
+
+  #recordPanel {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 12px 20px 24px;
+    background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .record-item {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .record-icon { font-size: 14px; }
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 10, 15, 0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 100;
+    pointer-events: all;
+  }
+
+  #overlay h1 {
+    font-size: 36px;
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  #overlay .emoji-big { font-size: 64px; margin-bottom: 8px; }
+
+  #overlay p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.6);
+    text-align: center;
+    max-width: 280px;
+    line-height: 1.6;
+  }
+
+  #startBtn {
+    background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+    border: none;
+    border-radius: 50px;
+    padding: 16px 40px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+    cursor: pointer;
+    pointer-events: all;
+    margin-top: 8px;
+    box-shadow: 0 4px 24px rgba(255,107,107,0.4);
+    transition: transform 0.1s;
+  }
+
+  #startBtn:active { transform: scale(0.97); }
+
+  #recordBtn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50px;
+    padding: 10px 28px;
+    font-size: 14px;
+    color: white;
+    cursor: pointer;
+    pointer-events: all;
+  }
+
+  #historyPanel {
+    position: absolute;
+    inset: 0;
+    background: rgba(10,10,15,0.95);
+    z-index: 200;
+    overflow-y: auto;
+    padding: 40px 24px;
+    display: none;
+  }
+
+  #historyPanel h2 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .history-day {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .history-date { font-size: 13px; color: rgba(255,255,255,0.5); }
+  .history-stats { display: flex; gap: 16px; }
+  .history-stat { text-align: right; }
+  .history-stat-val { font-size: 18px; font-weight: 700; }
+  .history-stat-lbl { font-size: 10px; color: rgba(255,255,255,0.4); }
+
+  #closeHistoryBtn {
+    display: block;
+    margin: 24px auto 0;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50px;
+    padding: 12px 32px;
+    font-size: 15px;
+    color: white;
+    cursor: pointer;
+  }
+
+  #loadingMsg {
+    font-size: 14px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  #sessionResult {
+    position: absolute;
+    inset: 0;
+    background: rgba(10,10,15,0.95);
+    z-index: 150;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    pointer-events: all;
+  }
+
+  #sessionResult h2 { font-size: 28px; font-weight: 800; }
+  #sessionResult .big-num { font-size: 64px; font-weight: 900; line-height: 1; }
+  #sessionResult .unit { font-size: 14px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+
+  .result-grid {
+    display: flex;
+    gap: 16px;
+    margin: 8px 0;
+  }
+
+  .result-card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 16px;
+    padding: 16px 24px;
+    text-align: center;
+    min-width: 120px;
+  }
+
+  #restartBtn {
+    background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+    border: none;
+    border-radius: 50px;
+    padding: 14px 36px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a1a;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  #timerDisplay {
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+  }
+
+  .pulse {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <canvas id="videoCanvas"></canvas>
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="ui">
+    <div id="topBar">
+      <div class="stat-box">
+        <div class="stat-label">🍎 터진 과일</div>
+        <div class="stat-value" id="fruitCount">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">⬆️ 최고 높이</div>
+        <div class="stat-value" id="maxHeight">0%</div>
+      </div>
+      <div class="stat-box" id="timerBox" style="cursor:pointer;pointer-events:all;" onclick="endSession()">
+        <div class="stat-label">⏱ 타이머</div>
+        <div class="stat-value" id="timerDisplay">0:00</div>
+      </div>
+    </div>
+
+    <div id="heightBar">
+      <div id="heightFill"></div>
+    </div>
+    <div id="heightLabel">고개 높이</div>
+
+    <div id="recordPanel">
+      <div class="record-item" id="todayRecord">
+        <span class="record-icon">📅</span>
+        <span>오늘 기록 없음</span>
+      </div>
+      <div class="record-item" style="cursor:pointer;pointer-events:all;" onclick="showHistory()">
+        <span class="record-icon">📊</span>
+        <span>전체 기록</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <div class="emoji-big">🍓🍊🫐</div>
+    <h1>터미타임<br>과일비 🌧️</h1>
+    <p>태블릿을 바닥에 두고<br>아기 얼굴을 카메라에 비춰주세요<br>고개를 들면 과일이 터져요!</p>
+    <div id="loadingMsg" class="pulse">카메라 준비 중...</div>
+    <button id="startBtn" style="display:none" onclick="startGame()">시작하기 🎮</button>
+    <button id="recordBtn" onclick="showHistory()">📊 기록 보기</button>
+  </div>
+
+  <div id="sessionResult">
+    <div style="font-size: 48px">🎉</div>
+    <h2>잘했어요!</h2>
+    <div class="result-grid">
+      <div class="result-card">
+        <div class="big-num" id="resultFruits">0</div>
+        <div class="unit">터진 과일</div>
+      </div>
+      <div class="result-card">
+        <div class="big-num" id="resultHeight">0</div>
+        <div class="unit">% 최고 높이</div>
+      </div>
+    </div>
+    <div class="result-card" style="width: 100%; max-width: 260px;">
+      <div style="font-size: 13px; color: rgba(255,255,255,0.5)">운동 시간</div>
+      <div style="font-size: 24px; font-weight: 700;" id="resultTime">0:00</div>
+    </div>
+    <button id="restartBtn" onclick="restartGame()">다시 하기 🔄</button>
+    <button id="recordBtn2" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:50px;padding:10px 28px;font-size:14px;color:white;cursor:pointer;margin-top:4px;" onclick="showHistory()">기록 보기 📊</button>
+  </div>
+
+  <div id="historyPanel">
+    <h2>📊 터미타임 기록</h2>
+    <div id="historyList"></div>
+    <button id="closeHistoryBtn" onclick="hideHistory()">닫기</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+<script>
+
+const videoCanvas = document.getElementById('videoCanvas');
+const gameCanvas = document.getElementById('gameCanvas');
+const vCtx = videoCanvas.getContext('2d');
+const gCtx = gameCanvas.getContext('2d');
+
+let W, H;
+function resize() {
+  W = window.innerWidth; H = window.innerHeight;
+  videoCanvas.width = gameCanvas.width = W;
+  videoCanvas.height = gameCanvas.height = H;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Audio
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playPop(x, y) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  const t = audioCtx.currentTime;
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(600 + Math.random() * 400, t);
+  osc.frequency.exponentialRampToValueAtTime(200 + Math.random() * 100, t + 0.12);
+  gain.gain.setValueAtTime(0.35, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+  osc.start(t);
+  osc.stop(t + 0.13);
+}
+
+function playBubble() {
+  const bufSize = audioCtx.sampleRate * 0.06;
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufSize * 0.3));
+  }
+  const src = audioCtx.createBufferSource();
+  const gain = audioCtx.createGain();
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 800 + Math.random() * 600;
+  filter.Q.value = 8;
+  src.buffer = buf;
+  src.connect(filter);
+  filter.connect(gain);
+  gain.connect(audioCtx.destination);
+  gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+  src.start();
+}
+
+// Fruit types
+const FRUITS = [
+  { emoji: '🍎', color: '#ff4444', size: 28 },
+  { emoji: '🍊', color: '#ff8c00', size: 26 },
+  { emoji: '🍋', color: '#ffd700', size: 24 },
+  { emoji: '🍇', color: '#9b59b6', size: 22 },
+  { emoji: '🫐', color: '#4169e1', size: 20 },
+  { emoji: '🍓', color: '#ff1493', size: 24 },
+  { emoji: '🍑', color: '#ffb347', size: 26 },
+  { emoji: '🍒', color: '#cc0000', size: 22 },
+  { emoji: '🥝', color: '#5cb85c', size: 22 },
+  { emoji: '🍌', color: '#f0e68c', size: 26 },
+];
+
+let fruits = [];
+let particles = [];
+let headPos = null; // {x, y, r}
+let sessionActive = false;
+let fruitCount = 0;
+let maxHeightPct = 0;
+let sessionStart = 0;
+let timerInterval = null;
+
+// landmark #1 = nose tip
+let nosePx = null, noseRaw = null;
+
+function spawnFruit() {
+  if (!sessionActive) return;
+  const f = FRUITS[Math.floor(Math.random() * FRUITS.length)];
+  const size = f.size * (W / 400);
+  fruits.push({
+    x: Math.random() * (W - size * 2) + size,
+    y: -size,
+    vy: 1.5 + Math.random() * 2.5,
+    vx: (Math.random() - 0.5) * 0.8,
+    rot: Math.random() * Math.PI * 2,
+    rotV: (Math.random() - 0.5) * 0.08,
+    emoji: f.emoji,
+    color: f.color,
+    size: size,
+    id: Math.random()
+  });
+}
+
+function spawnParticles(x, y, color) {
+  for (let i = 0; i < 10; i++) {
+    const angle = (Math.PI * 2 / 10) * i + Math.random() * 0.4;
+    const speed = 3 + Math.random() * 6;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2,
+      life: 1,
+      decay: 0.03 + Math.random() * 0.04,
+      r: 4 + Math.random() * 6,
+      color
+    });
+  }
+}
+
+let spawnTimer = 0;
+const SPAWN_INTERVAL = 28;
+
+function gameLoop() {
+  gCtx.clearRect(0, 0, W, H);
+
+  if (!sessionActive) { requestAnimationFrame(gameLoop); return; }
+
+  spawnTimer++;
+  if (spawnTimer >= SPAWN_INTERVAL) { spawnFruit(); spawnTimer = 0; }
+
+  // Update & draw fruits
+  const toRemove = new Set();
+  fruits.forEach(f => {
+    f.x += f.vx;
+    f.y += f.vy;
+    f.rot += f.rotV;
+    f.vy += 0.05;
+
+    if (f.y > H + f.size) { toRemove.add(f.id); return; }
+
+    // Collision with head
+    if (headPos) {
+      const dx = f.x - headPos.x;
+      const dy = f.y - headPos.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < headPos.r + f.size * 0.6) {
+        toRemove.add(f.id);
+        spawnParticles(f.x, f.y, f.color);
+        playBubble();
+        fruitCount++;
+        document.getElementById('fruitCount').textContent = fruitCount;
+      }
+    }
+
+    // Draw fruit emoji
+    gCtx.save();
+    gCtx.translate(f.x, f.y);
+    gCtx.rotate(f.rot);
+    gCtx.font = `${f.size}px serif`;
+    gCtx.textAlign = 'center';
+    gCtx.textBaseline = 'middle';
+    gCtx.fillText(f.emoji, 0, 0);
+    gCtx.restore();
+  });
+
+  fruits = fruits.filter(f => !toRemove.has(f.id));
+
+  // Update & draw particles
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.vy += 0.15;
+    p.life -= p.decay;
+    gCtx.save();
+    gCtx.globalAlpha = p.life;
+    gCtx.fillStyle = p.color;
+    gCtx.beginPath();
+    gCtx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+    gCtx.fill();
+    gCtx.restore();
+  });
+
+  // Draw head tracking ring
+  if (headPos) {
+    gCtx.save();
+    gCtx.strokeStyle = 'rgba(255,255,255,0.25)';
+    gCtx.lineWidth = 2;
+    gCtx.setLineDash([6, 4]);
+    gCtx.beginPath();
+    gCtx.arc(headPos.x, headPos.y, headPos.r, 0, Math.PI * 2);
+    gCtx.stroke();
+    gCtx.restore();
+
+    // Height calculation — lower Y = higher head lift
+    const heightPct = Math.max(0, Math.min(100, Math.round((1 - headPos.y / H) * 100 * 1.8)));
+    document.getElementById('heightFill').style.height = heightPct + '%';
+
+    if (heightPct > maxHeightPct) {
+      maxHeightPct = heightPct;
+      document.getElementById('maxHeight').textContent = maxHeightPct + '%';
+    }
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+// MediaPipe FaceMesh
+let faceMesh, camera;
+let videoEl;
+
+function initMediaPipe() {
+  videoEl = document.createElement('video');
+  videoEl.autoplay = true;
+  videoEl.playsInline = true;
+
+  faceMesh = new FaceMesh({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+  });
+
+  faceMesh.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: false,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+
+  faceMesh.onResults(onResults);
+
+  camera = new Camera(videoEl, {
+    onFrame: async () => {
+      if (videoEl.readyState >= 2) {
+        // Mirror video to canvas
+        vCtx.save();
+        vCtx.scale(-1, 1);
+        vCtx.drawImage(videoEl, -W, 0, W, H);
+        vCtx.restore();
+        await faceMesh.send({ image: videoEl });
+      }
+    },
+    width: 1280,
+    height: 720
+  });
+
+  camera.start().then(() => {
+    document.getElementById('loadingMsg').style.display = 'none';
+    document.getElementById('startBtn').style.display = 'block';
+  }).catch(err => {
+    document.getElementById('loadingMsg').textContent = '카메라 권한이 필요해요 😢';
+    console.error(err);
+  });
+}
+
+function onResults(results) {
+  if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+    headPos = null;
+    return;
+  }
+
+  const lm = results.multiFaceLandmarks[0];
+  // Use nose tip (1), forehead (10), chin (152) for head circle
+  const nose = lm[1];
+  const forehead = lm[10];
+  const chin = lm[152];
+  const leftEar = lm[234];
+  const rightEar = lm[454];
+
+  // Mirror X (we flipped canvas)
+  const noseX = (1 - nose.x) * W;
+  const noseY = nose.y * H;
+  const foreheadY = forehead.y * H;
+  const chinY = chin.y * H;
+  const earSpan = Math.abs(leftEar.x - rightEar.x) * W;
+
+  const headRadius = Math.max(earSpan * 0.55, (chinY - foreheadY) * 0.55, 40);
+  const headCenterY = (foreheadY + chinY) / 2;
+
+  headPos = { x: noseX, y: headCenterY, r: headRadius };
+}
+
+// Game state
+function startGame() {
+  document.getElementById('overlay').style.display = 'none';
+  sessionActive = true;
+  fruitCount = 0;
+  maxHeightPct = 0;
+  sessionStart = Date.now();
+  document.getElementById('fruitCount').textContent = '0';
+  document.getElementById('maxHeight').textContent = '0%';
+  timerInterval = setInterval(updateTimer, 1000);
+}
+
+function updateTimer() {
+  const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  document.getElementById('timerDisplay').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+function endSession() {
+  if (!sessionActive) return;
+  sessionActive = false;
+  clearInterval(timerInterval);
+  fruits = [];
+  particles = [];
+  headPos = null;
+
+  const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  const timeStr = `${m}:${s.toString().padStart(2,'0')}`;
+
+  document.getElementById('resultFruits').textContent = fruitCount;
+  document.getElementById('resultHeight').textContent = maxHeightPct;
+  document.getElementById('resultTime').textContent = timeStr;
+
+  saveRecord(fruitCount, maxHeightPct, elapsed);
+  updateTodayRecord();
+
+  const sr = document.getElementById('sessionResult');
+  sr.style.display = 'flex';
+}
+
+function restartGame() {
+  document.getElementById('sessionResult').style.display = 'none';
+  startGame();
+}
+
+// Storage
+function saveRecord(fruits, height, seconds) {
+  const today = new Date().toLocaleDateString('ko-KR');
+  const records = JSON.parse(localStorage.getItem('tummytime_records') || '[]');
+  records.push({ date: today, fruits, height, seconds, ts: Date.now() });
+  localStorage.setItem('tummytime_records', JSON.stringify(records));
+}
+
+function updateTodayRecord() {
+  const today = new Date().toLocaleDateString('ko-KR');
+  const records = JSON.parse(localStorage.getItem('tummytime_records') || '[]');
+  const todayRecords = records.filter(r => r.date === today);
+  if (todayRecords.length === 0) return;
+  const maxH = Math.max(...todayRecords.map(r => r.height));
+  const totalF = todayRecords.reduce((a, r) => a + r.fruits, 0);
+  document.getElementById('todayRecord').innerHTML =
+    `<span class="record-icon">📅</span><span>오늘: 🍎 ${totalF}개 · ⬆️ ${maxH}%</span>`;
+}
+
+function showHistory() {
+  const records = JSON.parse(localStorage.getItem('tummytime_records') || '[]');
+  const byDay = {};
+  records.forEach(r => {
+    if (!byDay[r.date]) byDay[r.date] = { fruits: 0, height: 0, seconds: 0, count: 0 };
+    byDay[r.date].fruits += r.fruits;
+    byDay[r.date].height = Math.max(byDay[r.date].height, r.height);
+    byDay[r.date].seconds += r.seconds;
+    byDay[r.date].count++;
+  });
+
+  const dates = Object.keys(byDay).sort((a, b) => new Date(b) - new Date(a));
+  const list = document.getElementById('historyList');
+
+  if (dates.length === 0) {
+    list.innerHTML = '<p style="text-align:center;color:rgba(255,255,255,0.4);padding:40px 0;">아직 기록이 없어요<br>첫 터미타임을 시작해보세요! 🍓</p>';
+  } else {
+    list.innerHTML = dates.map(d => {
+      const r = byDay[d];
+      const m = Math.floor(r.seconds / 60);
+      const s = r.seconds % 60;
+      return `<div class="history-day">
+        <div>
+          <div style="font-size:15px;font-weight:600;">${d}</div>
+          <div class="history-date">${r.count}회 세션</div>
+        </div>
+        <div class="history-stats">
+          <div class="history-stat">
+            <div class="history-stat-val">🍎 ${r.fruits}</div>
+            <div class="history-stat-lbl">터진 과일</div>
+          </div>
+          <div class="history-stat">
+            <div class="history-stat-val">⬆️ ${r.height}%</div>
+            <div class="history-stat-lbl">최고 높이</div>
+          </div>
+          <div class="history-stat">
+            <div class="history-stat-val">⏱ ${m}:${s.toString().padStart(2,'0')}</div>
+            <div class="history-stat-lbl">운동 시간</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('historyPanel').style.display = 'block';
+}
+
+function hideHistory() {
+  document.getElementById('historyPanel').style.display = 'none';
+}
+
+// Init
+updateTodayRecord();
+gameLoop();
+initMediaPipe();
+
+// Resume audio on touch
+document.addEventListener('touchstart', () => audioCtx.resume(), { once: true });
+document.addEventListener('click', () => audioCtx.resume(), { once: true });
+
+</script>
+</body>
+</html>
